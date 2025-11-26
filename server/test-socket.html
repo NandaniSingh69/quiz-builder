@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Test</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .box {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+    }
+    input {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 200px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #f5f5f5;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      border: 1px solid #ddd;
+    }
+    .status-connected {
+      color: green;
+      font-weight: bold;
+    }
+    .status-disconnected {
+      color: red;
+      font-weight: bold;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>🎯 Real-Time Quiz Test</h1>
+  
+  <div class="box">
+    <h3>Connection</h3>
+    <p>Status: <span id="status" class="status-disconnected">Disconnected</span></p>
+    <p>Socket ID: <span id="socketId">-</span></p>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()">Disconnect</button>
+  </div>
+  
+  <div class="box">
+    <h3>Join Session</h3>
+    <input type="text" id="sessionCode" placeholder="Session Code" value="">
+    <input type="text" id="participantName" placeholder="Your Name" value="">
+    <br>
+    <button onclick="joinSession()">Join as Participant</button>
+    <button onclick="joinAsEducator()">Join as Educator</button>
+  </div>
+  
+  <div class="box">
+    <h3>Educator Controls</h3>
+    <button onclick="startQuiz()">Start Quiz</button>
+    <button onclick="nextQuestion()">Next Question</button>
+  </div>
+  
+  <div class="box">
+    <h3>Event Log</h3>
+    <button onclick="clearLog()" style="float: right; background: #6c757d;">Clear Log</button>
+    <div id="log" class="log"></div>
+  </div>
+
+  <script>
+    let socket = null;
+    let currentSessionCode = null;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+      logDiv.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+      log('Log cleared', 'info');
+    }
+
+    function connect() {
+      if (socket && socket.connected) {
+        log('Already connected!', 'error');
+        return;
+      }
+
+      log('Attempting to connect to http://localhost:5000...', 'info');
+      
+      try {
+        socket = io('http://localhost:5000', {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 10000
+        });
+        
+        socket.on('connect', () => {
+          document.getElementById('status').textContent = 'Connected ✅';
+          document.getElementById('status').className = 'status-connected';
+          document.getElementById('socketId').textContent = socket.id;
+          log('✅ Connected to server successfully!', 'success');
+          log(`Socket ID: ${socket.id}`, 'success');
+        });
+        
+        socket.on('connect_error', (error) => {
+          log(`❌ Connection error: ${error.message}`, 'error');
+          document.getElementById('status').textContent = 'Connection Failed ❌';
+          document.getElementById('status').className = 'status-disconnected';
+        });
+        
+        socket.on('disconnect', (reason) => {
+          document.getElementById('status').textContent = 'Disconnected ❌';
+          document.getElementById('status').className = 'status-disconnected';
+          document.getElementById('socketId').textContent = '-';
+          log(`Disconnected: ${reason}`, 'error');
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+          log(`Reconnected after ${attemptNumber} attempts`, 'success');
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+          log(`Reconnection attempt ${attemptNumber}...`, 'info');
+        });
+        
+        socket.on('session-state', (data) => {
+          log(`📊 Session state: ${JSON.stringify(data)}`, 'info');
+        });
+        
+        socket.on('participant-count', (data) => {
+          log(`👥 Participants: ${data.count}`, 'success');
+        });
+        
+        socket.on('quiz-started', (data) => {
+          log('🚀 Quiz started!', 'success');
+        });
+        
+        socket.on('new-question', (data) => {
+          log(`❓ Question ${data.questionIndex + 1}/${data.totalQuestions}:`, 'info');
+          log(`   ${data.question.question}`, 'info');
+          log(`   Options: ${data.question.options.join(', ')}`, 'info');
+        });
+        
+        socket.on('leaderboard-update', (data) => {
+          if (data.leaderboard && data.leaderboard[0]) {
+            log(`🏆 Leaderboard Top: ${data.leaderboard[0].name} - ${data.leaderboard[0].score} pts`, 'success');
+          }
+        });
+        
+        socket.on('quiz-completed', (data) => {
+          log('🏁 Quiz completed!', 'success');
+        });
+        
+        socket.on('participant-answered', (data) => {
+          const icon = data.isCorrect ? '✅' : '❌';
+          log(`📝 ${data.participantName} answered ${icon}`, 'info');
+        });
+        
+        socket.on('participant-joined', (data) => {
+          log(`✅ You joined as ${data.participantName}`, 'success');
+          log(`Your Participant ID: ${data.participantId}`, 'success');
+          
+          // Store for later use
+          window.myParticipantId = data.participantId;
+          window.myParticipantName = data.participantName;
+        });
+
+        socket.on('participant-update', (data) => {
+          if (data.action === 'joined') {
+            log(`👋 ${data.participantName} joined! (Total: ${data.totalParticipants})`, 'success');
+          }
+        });
+        
+        socket.on('error', (data) => {
+          log(`❌ Error: ${data.message}`, 'error');
+        });
+        
+      } catch (error) {
+        log(`❌ Failed to create socket: ${error.message}`, 'error');
+      }
+    }
+
+    function disconnect() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+        log('Manually disconnected', 'info');
+      } else {
+        log('Not connected!', 'error');
+      }
+    }
+
+    function joinSession() {
+      if (!socket || !socket.connected) {
+        log('❌ Connect to server first!', 'error');
+        return;
+      }
+      
+      currentSessionCode = document.getElementById('sessionCode').value;
+      const name = document.getElementById('participantName').value;
+      
+      if (!currentSessionCode || !name) {
+        log('❌ Please enter session code and name', 'error');
+        return;
+      }
+      
+      socket.emit('join-session', {
+        sessionCode: currentSessionCode,
+        role: 'participant',
+        participantName: name
+      });
+      
+      log(`Joining session ${currentSessionCode} as ${name}...`, 'info');
+    }
+
+    function joinAsEducator() {
+      if (!socket || !socket.connected) {
+        log('❌ Connect to server first!', 'error');
+        return;
+      }
+      
+      currentSessionCode = document.getElementById('sessionCode').value;
+      
+      if (!currentSessionCode) {
+        log('❌ Please enter session code', 'error');
+        return;
+      }
+      
+      socket.emit('join-session', {
+        sessionCode: currentSessionCode,
+        role: 'educator'
+      });
+      
+      log(`Joining session ${currentSessionCode} as educator...`, 'info');
+    }
+
+    function startQuiz() {
+      if (!socket || !socket.connected) {
+        log('❌ Not connected!', 'error');
+        return;
+      }
+      
+      if (!currentSessionCode) {
+        log('❌ Join a session first!', 'error');
+        return;
+      }
+      
+      socket.emit('start-quiz', {
+        sessionCode: currentSessionCode
+      });
+      
+      log('Starting quiz...', 'info');
+    }
+
+    function nextQuestion() {
+      if (!socket || !socket.connected) {
+        log('❌ Not connected!', 'error');
+        return;
+      }
+      
+      if (!currentSessionCode) {
+        log('❌ Join a session first!', 'error');
+        return;
+      }
+      
+      socket.emit('next-question', {
+        sessionCode: currentSessionCode
+      });
+      
+      log('Moving to next question...', 'info');
+    }
+
+    // Page load handler
+    window.onload = () => {
+      log('Page loaded. Click "Connect" button to start.', 'info');
+      log('Make sure your server is running on http://localhost:5000', 'info');
+    };
+  </script>
+</body>
+</html>

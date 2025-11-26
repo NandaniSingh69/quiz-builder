@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// Base URL of your backend
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// Create an axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,15 +9,26 @@ const api = axios.create({
   },
 });
 
-// Test function to check backend connection
-export const checkHealth = async () => {
-  try {
-    const response = await api.get('/health');
-    return response.data;
-  } catch (error) {
-    console.error('Backend connection failed:', error);
-    throw error;
+// Request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-};
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 export default api;
