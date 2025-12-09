@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import toast from 'react-hot-toast';
+import CopyButton from '../../components/CopyButton';
+
 
 const Results = () => {
   const { sessionCode } = useParams();
@@ -72,200 +75,210 @@ const Results = () => {
     });
   };
 
-  const exportToCSV = async () => {
-    try {
-      setExporting('csv');
-      console.log('📥 Exporting to CSV...');
-      
-      if (participants.length === 0) {
-        alert('No participants data to export');
-        return;
-      }
-
-      const headers = ['Rank', 'Name', 'Score', 'Questions Answered', 'Correct', 'Wrong', 'Accuracy %'];
-      
-      const rows = participants
-        .sort((a, b) => b.score - a.score)
-        .map((p, index) => {
-          const correct = p.answers?.filter(a => a.isCorrect).length || 0;
-          const total = p.answers?.length || 0;
-          const wrong = total - correct;
-          const accuracy = total > 0 ? ((correct / total) * 100).toFixed(1) : '0';
-          
-          return [
-            index + 1,
-            p.name,
-            p.score,
-            total,
-            correct,
-            wrong,
-            accuracy
-          ];
-        });
-      
-      let csvContent = headers.join(',') + '\n';
-      
-      rows.forEach(row => {
-        csvContent += row.map(cell => {
-          const stringCell = String(cell);
-          return stringCell.includes(',') ? `"${stringCell.replace(/"/g, '""')}"` : stringCell;
-        }).join(',') + '\n';
-      });
-      
-      csvContent += '\n';
-      csvContent += 'Summary Statistics\n';
-      csvContent += `Total Participants,${stats.totalParticipants}\n`;
-      csvContent += `Average Score,${stats.averageScore}\n`;
-      csvContent += `Highest Score,${stats.highestScore}\n`;
-      csvContent += `Lowest Score,${stats.lowestScore}\n`;
-      csvContent += `Completion Rate,${stats.completionRate}%\n`;
-      
-      const BOM = '\uFEFF';
-      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${quizTitle.replace(/\s+/g, '_')}_results_${sessionCode}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      console.log('✅ CSV exported successfully');
-      alert('CSV exported successfully!');
-    } catch (error) {
-      console.error('❌ Error exporting CSV:', error);
-      alert('Failed to export CSV: ' + error.message);
-    } finally {
-      setExporting(null);
+  // EXPORT TO CSV
+const exportToCSV = async () => {
+  try {
+    setExporting('csv');
+    console.log('📥 Exporting to CSV...');
+    
+    if (participants.length === 0) {
+      toast.error('No participants data to export');
+      return;
     }
-  };
 
-  const exportToPDF = async () => {
-    try {
-      setExporting('pdf');
-      console.log('📄 Exporting to PDF...');
-      
-      if (participants.length === 0) {
-        alert('No participants data to export');
-        return;
-      }
+    const headers = ['Rank', 'Name', 'Score', 'Questions Answered', 'Correct', 'Wrong', 'Accuracy %'];
+    
+    const rows = participants
+      .sort((a, b) => b.score - a.score)
+      .map((p, index) => {
+        const correct = p.answers?.filter(a => a.isCorrect).length || 0;
+        const total = p.answers?.length || 0;
+        const wrong = total - correct;
+        const accuracy = total > 0 ? ((correct / total) * 100).toFixed(1) : '0';
+        
+        return [
+          index + 1,
+          p.name,
+          p.score,
+          total,
+          correct,
+          wrong,
+          accuracy
+        ];
+      });
+    
+    let csvContent = headers.join(',') + '\n';
+    
+    rows.forEach(row => {
+      csvContent += row.map(cell => {
+        const stringCell = String(cell);
+        return stringCell.includes(',') ? `"${stringCell.replace(/"/g, '""')}"` : stringCell;
+      }).join(',') + '\n';
+    });
+    
+    csvContent += '\n';
+    csvContent += 'Summary Statistics\n';
+    csvContent += `Total Participants,${stats.totalParticipants}\n`;
+    csvContent += `Average Score,${stats.averageScore}\n`;
+    csvContent += `Highest Score,${stats.highestScore}\n`;
+    csvContent += `Lowest Score,${stats.lowestScore}\n`;
+    csvContent += `Completion Rate,${stats.completionRate}%\n`;
+    
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${quizTitle.replace(/\s+/g, '_')}_results_${sessionCode}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('✅ CSV exported successfully');
+    toast.success('CSV exported successfully!');
+  } catch (error) {
+    console.error('❌ Error exporting CSV:', error);
+    toast.error('Failed to export CSV: ' + error.message);
+  } finally {
+    setExporting(null);
+  }
+};
 
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      let yPosition = 15;
+// EXPORT TO PDF
+const exportToPDF = async () => {
+  try {
+    setExporting('pdf');
+    console.log('📄 Exporting to PDF...');
+    
+    if (participants.length === 0) {
+      toast.error('No participants data to export');
+      return;
+    }
 
-      pdf.setFontSize(24);
-      pdf.setFont(undefined, 'bold');
-      pdf.text(quizTitle, 14, yPosition);
-      yPosition += 10;
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    let yPosition = 15;
 
-      pdf.setFontSize(10);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(`Session Code: ${sessionCode}`, 14, yPosition);
-      yPosition += 6;
-      pdf.text(`Date: ${new Date().toLocaleDateString()}`, 14, yPosition);
-      yPosition += 6;
-      pdf.text(`Time: ${new Date().toLocaleTimeString()}`, 14, yPosition);
-      yPosition += 12;
+    // Title
+    pdf.setFontSize(24);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(quizTitle, 14, yPosition);
+    yPosition += 10;
 
-      pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
-      pdf.text('Summary Statistics', 14, yPosition);
-      yPosition += 8;
+    // Session info
+    pdf.setFontSize(10);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Session Code: ${sessionCode}`, 14, yPosition);
+    yPosition += 6;
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, 14, yPosition);
+    yPosition += 6;
+    pdf.text(`Time: ${new Date().toLocaleTimeString()}`, 14, yPosition);
+    yPosition += 12;
 
-      pdf.setFontSize(9);
-      pdf.setFont(undefined, 'normal');
-      pdf.text(`Total Participants: ${stats.totalParticipants}`, 14, yPosition);
-      yPosition += 6;
-      pdf.text(`Average Score: ${stats.averageScore}`, 14, yPosition);
-      yPosition += 6;
-      pdf.text(`Highest Score: ${stats.highestScore}`, 80, yPosition - 6);
-      pdf.text(`Lowest Score: ${stats.lowestScore}`, 80, yPosition);
-      yPosition += 6;
-      pdf.text(`Completion Rate: ${stats.completionRate}%`, 140, yPosition - 6);
-      yPosition += 12;
+    // Summary stats
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Summary Statistics', 14, yPosition);
+    yPosition += 8;
 
-      const tableData = participants
-        .sort((a, b) => b.score - a.score)
-        .map((p, index) => {
-          const correct = p.answers?.filter(a => a.isCorrect).length || 0;
-          const total = p.answers?.length || 0;
-          const wrong = total - correct;
-          const accuracy = total > 0 ? ((correct / total) * 100).toFixed(1) : '0';
-          
-          return [
-            index + 1,
-            p.name,
-            p.score,
-            total,
-            correct,
-            wrong,
-            accuracy + '%'
-          ];
-        });
+    pdf.setFontSize(9);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Total Participants: ${stats.totalParticipants}`, 14, yPosition);
+    yPosition += 6;
+    pdf.text(`Average Score: ${stats.averageScore}`, 14, yPosition);
+    yPosition += 6;
+    pdf.text(`Highest Score: ${stats.highestScore}`, 80, yPosition - 6);
+    pdf.text(`Lowest Score: ${stats.lowestScore}`, 80, yPosition);
+    yPosition += 6;
+    pdf.text(`Completion Rate: ${stats.completionRate}%`, 140, yPosition - 6);
+    yPosition += 12;
 
-      pdf.autoTable({
-        startY: yPosition,
-        head: [['Rank', 'Name', 'Score', 'Answered', 'Correct', 'Wrong', 'Accuracy']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: {
-          fillColor: [59, 130, 246],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 10
-        },
-        bodyStyles: {
-          textColor: [0, 0, 0],
-          fontSize: 9
-        },
-        alternateRowStyles: {
-          fillColor: [240, 248, 255]
-        },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 15 },
-          1: { halign: 'left', cellWidth: 60 },
-          2: { halign: 'center', cellWidth: 15 },
-          3: { halign: 'center', cellWidth: 20 },
-          4: { halign: 'center', cellWidth: 15 },
-          5: { halign: 'center', cellWidth: 15 },
-          6: { halign: 'center', cellWidth: 20 }
-        },
-        margin: { top: 10, right: 10, left: 10, bottom: 10 }
+    // Table data
+    const tableData = participants
+      .sort((a, b) => b.score - a.score)
+      .map((p, index) => {
+        const correct = p.answers?.filter(a => a.isCorrect).length || 0;
+        const total = p.answers?.length || 0;
+        const wrong = total - correct;
+        const accuracy = total > 0 ? ((correct / total) * 100).toFixed(1) : '0';
+        
+        return [
+          index + 1,
+          p.name,
+          p.score,
+          total,
+          correct,
+          wrong,
+          accuracy + '%'
+        ];
       });
 
-      const pageCount = pdf.internal.getNumberOfPages();
-      pdf.setFontSize(8);
-      pdf.setFont(undefined, 'italic');
-      pdf.setTextColor(128, 128, 128);
-      
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.text(
-          `Page ${i} of ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
-      }
+    // Add table
+    pdf.autoTable({
+      startY: yPosition,
+      head: [['Rank', 'Name', 'Score', 'Answered', 'Correct', 'Wrong', 'Accuracy']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center',
+        fontSize: 10
+      },
+      bodyStyles: {
+        textColor: [0, 0, 0],
+        fontSize: 9
+      },
+      alternateRowStyles: {
+        fillColor: [240, 248, 255]
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 },
+        1: { halign: 'left', cellWidth: 60 },
+        2: { halign: 'center', cellWidth: 15 },
+        3: { halign: 'center', cellWidth: 20 },
+        4: { halign: 'center', cellWidth: 15 },
+        5: { halign: 'center', cellWidth: 15 },
+        6: { halign: 'center', cellWidth: 20 }
+      },
+      margin: { top: 10, right: 10, left: 10, bottom: 10 }
+    });
 
-      const filename = `${quizTitle.replace(/\s+/g, '_')}_results_${sessionCode}.pdf`;
-      pdf.save(filename);
-      
-      console.log('✅ PDF exported successfully');
-      alert('PDF exported successfully!');
-    } catch (error) {
-      console.error('❌ Error exporting PDF:', error);
-      alert('Failed to export PDF: ' + error.message);
-    } finally {
-      setExporting(null);
+    // Add footer to all pages
+    const pageCount = pdf.internal.getNumberOfPages();
+    pdf.setFontSize(8);
+    pdf.setFont(undefined, 'italic');
+    pdf.setTextColor(128, 128, 128);
+    
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i);
+      pdf.text(
+        `Page ${i} of ${pageCount}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
     }
-  };
+
+    // Save
+    const filename = `${quizTitle.replace(/\s+/g, '_')}_results_${sessionCode}.pdf`;
+    pdf.save(filename);
+    
+    console.log('✅ PDF exported successfully');
+    toast.success('PDF exported successfully!');
+  } catch (error) {
+    console.error('❌ Error exporting PDF:', error);
+    toast.error('Failed to export PDF: ' + error.message);
+  } finally {
+    setExporting(null);
+  }
+};
+
 
   if (loading) {
     return (

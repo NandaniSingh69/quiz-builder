@@ -9,10 +9,14 @@ const Session = require('../models/session');
 function initializeSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: "http://localhost:3000", // React app URL
+      origin: process.env.CLIENT_URL || "http://localhost:3000", // ✅ Use env variable
       methods: ["GET", "POST"],
       credentials: true
-    }
+    },
+    transports: ['websocket', 'polling'], // ✅ Support both transports
+    pingTimeout: 60000, // ✅ Increase timeout for production
+    pingInterval: 25000,
+    connectTimeout: 45000
   });
 
   // Track active connections
@@ -152,8 +156,6 @@ function initializeSocket(httpServer) {
         
         if (session) {
           session.status = 'active';
-          // DON'T change currentQuestionIndex - keep it at -1
-          // Educator will manually send first question
           await session.save();
           
           // Notify all participants
@@ -162,7 +164,7 @@ function initializeSocket(httpServer) {
           });
           
           console.log(`✅ Quiz started in session ${sessionCode}`);
-          console.log(`Current question index: ${session.currentQuestionIndex}`); // Should be -1
+          console.log(`Current question index: ${session.currentQuestionIndex}`);
         }
         
       } catch (error) {
@@ -350,6 +352,7 @@ function initializeSocket(httpServer) {
   });
 
   console.log('✅ Socket.IO server initialized');
+  console.log(`🌍 CORS origin: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
   
   return io;
 }

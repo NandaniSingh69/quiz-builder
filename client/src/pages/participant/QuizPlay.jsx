@@ -4,6 +4,8 @@ import { getSocket, initializeSocket } from '../../services/socket';
 import { submitAnswer } from '../../services/quizService';
 import { SOCKET_EVENTS } from '../../utils/constants';
 import Confetti from 'react-confetti';
+import toast from 'react-hot-toast';
+
 
 const QuizPlay = () => {
   const { sessionCode } = useParams();
@@ -48,39 +50,47 @@ const QuizPlay = () => {
 
   // Wrap handleSubmitAnswer in useCallback to prevent infinite loops
   const handleSubmitAnswer = useCallback(async () => {
-    if (selectedAnswer === null || hasAnswered) return;
+  if (selectedAnswer === null || hasAnswered) return;
 
-    setHasAnswered(true);
+  setHasAnswered(true);
 
-    try {
-      const response = await submitAnswer(
-        sessionCode,
-        participantId,
-        currentQuestion.questionIndex,
-        selectedAnswer
-      );
+  try {
+    const response = await submitAnswer(
+      sessionCode,
+      participantId,
+      currentQuestion.questionIndex,
+      selectedAnswer
+    );
 
-      if (response.success) {
-        setFeedback(response.result);
-        setScore(response.result.totalScore);
-        
-        playSound(response.result.isCorrect);
-        
-        if (socket) {
-          socket.emit('answer-submitted', {
-            sessionCode,
-            participantName,
-            isCorrect: response.result.isCorrect,
-            score: response.result.totalScore
-          });
-        }
+    if (response.success) {
+      setFeedback(response.result);
+      setScore(response.result.totalScore);
+      
+      playSound(response.result.isCorrect);
+      
+      // Show toast notification
+      if (response.result.isCorrect) {
+        toast.success(`Correct! +${response.result.points} points`, { icon: '🎉' });
+      } else {
+        toast.error('Incorrect answer', { icon: '😔' });
       }
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-      alert('Failed to submit answer');
-      setHasAnswered(false);
+      
+      if (socket) {
+        socket.emit('answer-submitted', {
+          sessionCode,
+          participantName,
+          isCorrect: response.result.isCorrect,
+          score: response.result.totalScore
+        });
+      }
     }
-  }, [selectedAnswer, hasAnswered, sessionCode, participantId, currentQuestion, socket, participantName, soundEnabled]);
+  } catch (error) {
+    console.error('Error submitting answer:', error);
+    toast.error('Failed to submit answer. Please try again.');
+    setHasAnswered(false);
+  }
+}, [selectedAnswer, hasAnswered, sessionCode, participantId, currentQuestion, socket, participantName, soundEnabled]);
+
 
   // Timer countdown effect
   useEffect(() => {

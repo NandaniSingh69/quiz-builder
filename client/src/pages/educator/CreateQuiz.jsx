@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createQuiz } from '../../services/quizService';
+import toast from 'react-hot-toast';
+
 
 const CreateQuiz = () => {
   const navigate = useNavigate();
@@ -23,67 +25,101 @@ const CreateQuiz = () => {
   };
 
   const handleGenerateQuiz = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setGeneratedQuiz(null);
+  e.preventDefault();
+  
+  // Validation
+  if (!formData.title || !formData.topic) {
+    toast.error('Please fill in quiz title and topic');
+    return;
+  }
 
-    try {
-      console.log('Generating quiz with:', formData);
-      const response = await createQuiz(formData);
-      
-      if (response.success) {
-        setGeneratedQuiz(response.quiz);
-        console.log('Quiz created:', response.quiz);
-      } else {
-        setError(response.error || 'Failed to create quiz');
-      }
-    } catch (err) {
-      console.error('Error creating quiz:', err);
-      setError(err.response?.data?.error || 'Failed to generate quiz. Please try again.');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  setError('');
+  setGeneratedQuiz(null);
+
+  try {
+    console.log('Generating quiz with:', formData);
+    const response = await createQuiz(formData);
+    
+    if (response.success) {
+      setGeneratedQuiz(response.quiz);
+      console.log('Quiz created:', response.quiz);
+      toast.success('Quiz generated successfully!', { 
+        duration: 3000,
+        style: {
+          fontSize: '16px',
+          fontWeight: 'bold'
+        }
+      });
+    } else {
+      const errorMsg = response.error || 'Failed to create quiz';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
-  };
+  } catch (err) {
+    console.error('Error creating quiz:', err);
+    const errorMsg = err.response?.data?.error || 'Failed to generate quiz. Please try again.';
+    setError(errorMsg);
+    toast.error(errorMsg, { duration: 4000 });
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleStartSession = () => {
-    if (generatedQuiz) {
+const handleStartSession = () => {
+  if (generatedQuiz) {
+    toast.success('Quiz saved! Redirecting to dashboard...', { 
+      duration: 1500,
+      icon: '✅'
+    });
+    setTimeout(() => {
       navigate('/educator/dashboard');
-    }
-  };
+    }, 500);
+  } else {
+    toast.error('Please generate a quiz first');
+  }
+};
 
   return (
     <div className="h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-purple-50 overflow-hidden flex flex-col">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-orange-200 shadow-sm py-3 px-6">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => navigate('/educator/dashboard')}
-              className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow hover:scale-110 transition-transform"
-            >
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <div>
-              <h1 className="text-lg font-extrabold text-stone-900" style={{ fontFamily: "'Nunito', sans-serif" }}>
-                Create AI Quiz
-              </h1>
-              <p className="text-xs text-stone-600" style={{ fontFamily: "'Open Sans', sans-serif" }}>
-                Generate questions in seconds ⚡
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/educator/dashboard')}
-            className="text-sm text-stone-600 hover:text-orange-600 font-semibold transition-colors"
-            style={{ fontFamily: "'Open Sans', sans-serif" }}
-          >
-            Cancel
-          </button>
+      {/* Header */}
+<header className="bg-white/90 backdrop-blur-md border-b border-orange-200 shadow-sm sticky top-0 z-10">
+  <div className="max-w-4xl mx-auto px-6 py-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={() => navigate('/')}
+          className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg hover:from-orange-600 hover:to-orange-700 transition-all"
+          title="Back to Home"
+        >
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div>
+          <h1 className="text-2xl font-extrabold text-stone-900" style={{ fontFamily: "'Nunito', sans-serif" }}>
+            Create AI Quiz
+          </h1>
+          <p className="text-xs text-stone-600" style={{ fontFamily: "'Open Sans', sans-serif" }}>
+            Generate questions in seconds ⚡
+          </p>
         </div>
-      </header>
+      </div>
+      <button
+        onClick={() => navigate('/educator/dashboard')}
+        className="bg-orange-100 text-orange-700 px-5 py-2.5 rounded-xl hover:bg-orange-200 transition-all font-bold border-2 border-orange-300 flex items-center space-x-2 shadow-md hover:shadow-lg"
+        style={{ fontFamily: "'Nunito', sans-serif" }}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+        <span>Dashboard</span>
+      </button>
+    </div>
+  </div>
+</header>
+
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-6 py-4">

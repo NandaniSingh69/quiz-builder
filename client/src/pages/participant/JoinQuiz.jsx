@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { joinSession } from '../../services/quizService';
+import toast from 'react-hot-toast';
+
 
 const JoinQuiz = () => {
   const navigate = useNavigate();
@@ -10,44 +12,45 @@ const JoinQuiz = () => {
   const [error, setError] = useState('');
 
   const handleJoin = async () => {
-    if (!sessionCode.trim() || !participantName.trim()) {
-      setError('Please enter both session code and your name');
-      return;
+  if (!sessionCode.trim() || !participantName.trim()) {
+    toast.error('Please enter both session code and your name');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+
+  console.log('Attempting to join session:', sessionCode, participantName);
+
+  try {
+    const response = await joinSession(sessionCode, participantName);
+    
+    console.log('Join response:', response);
+    
+    if (response.success) {
+      sessionStorage.setItem('participantId', response.participant.participantId);
+      sessionStorage.setItem('participantName', response.participant.name);
+      sessionStorage.setItem('sessionCode', sessionCode);
+      
+      console.log('✅ Participant data saved to sessionStorage');
+      
+      toast.success(`Welcome ${response.participant.name}!`);
+      navigate(`/play/${sessionCode}`);
+    } else {
+      toast.error(response.error || 'Failed to join session');
+      setError(response.error || 'Failed to join session');
     }
+    
+  } catch (error) {
+    console.error('❌ Error joining session:', error);
+    const errorMsg = error.response?.data?.error || 'Failed to join session. Please check the code and try again.';
+    toast.error(errorMsg);
+    setError(errorMsg);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    setError('');
-
-    console.log('Attempting to join session:', sessionCode, participantName);
-
-    try {
-      const response = await joinSession(sessionCode, participantName);
-      
-      console.log('Join response:', response);
-      
-      if (response.success) {
-  sessionStorage.setItem('participantId', response.participant.participantId);
-  sessionStorage.setItem('participantName', response.participant.name); // ← Should be .name NOT .participantName
-  sessionStorage.setItem('sessionCode', sessionCode);
-  
-  console.log('✅ Participant data saved:', {
-    id: response.participant.participantId,
-    name: response.participant.name
-  });
-  
-  navigate(`/play/${sessionCode}`);
-}
- else {
-        setError(response.error || 'Failed to join session');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error joining session:', error);
-      setError(error.response?.data?.error || 'Failed to join session. Please check the code and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {

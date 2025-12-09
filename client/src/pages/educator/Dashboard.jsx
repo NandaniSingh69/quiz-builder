@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllQuizzes, startSession } from '../../services/quizService';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
+import CopyButton from '../../components/CopyButton';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startingSession, setStartingSession] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, quiz: null });
 
   useEffect(() => {
     fetchQuizzes();
@@ -20,6 +24,7 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching quizzes:', error);
+      toast.error('Failed to load quizzes');
     } finally {
       setLoading(false);
     }
@@ -37,41 +42,46 @@ const Dashboard = () => {
       
       if (response.success) {
         await fetchQuizzes();
+        toast.success('Session started successfully!');
         navigate(`/educator/session/${response.session.sessionCode}`);
       } else {
-        alert('Failed to start session: ' + (response.error || 'Unknown error'));
+        toast.error(response.error || 'Failed to start session');
       }
     } catch (error) {
       console.error('Error starting session:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Failed to start session';
-      alert('Error: ' + errorMessage);
+      toast.error(errorMessage);
     } finally {
       setStartingSession(null);
     }
   };
 
-  const handleDeleteQuiz = async (quizId) => {
-    if (!window.confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
-      return;
-    }
-
+  const handleDeleteQuiz = async (quiz) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/quiz/${quizId}`, {
+      const response = await fetch(`http://localhost:5000/api/quiz/${quiz._id}`, {
         method: 'DELETE'
       });
       
       const data = await response.json();
       
       if (data.success) {
-        alert('Quiz deleted successfully');
+        toast.success('Quiz deleted successfully!');
         fetchQuizzes();
       } else {
-        alert('Failed to delete quiz: ' + data.error);
+        toast.error(data.error || 'Failed to delete quiz');
       }
     } catch (error) {
       console.error('Error deleting quiz:', error);
-      alert('Failed to delete quiz');
+      toast.error('Failed to delete quiz');
     }
+  };
+
+  const openDeleteModal = (quiz) => {
+    setDeleteModal({ isOpen: true, quiz });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, quiz: null });
   };
 
   return (
@@ -161,7 +171,7 @@ const Dashboard = () => {
         Total Participants
       </p>
       <p className="text-3xl font-bold text-stone-900" style={{ fontFamily: "'Nunito', sans-serif" }}>
-        {quizzes.reduce((sum, q) => sum + (q.participants?.length || 0), 0)}
+        {quizzes.reduce((sum, q) => sum + (q.participantCount || 0), 0)}
       </p>
     </div>
   </div>
@@ -273,12 +283,25 @@ const Dashboard = () => {
                             {quiz.difficulty}
                           </span>
                           {quiz.sessionCode && (
-                            <span className="inline-flex items-center bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg text-xs font-bold font-mono border border-orange-300">
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="inline-flex items-center bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-300">
+                              <svg className="w-4 h-4 mr-1 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                               </svg>
-                              {quiz.sessionCode}
-                            </span>
+                              <span className="text-xs font-bold font-mono text-orange-700 mr-2">{quiz.sessionCode}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(quiz.sessionCode);
+                                  toast.success('Session code copied!');
+                                }}
+                                className="text-orange-600 hover:text-orange-700"
+                                title="Copy session code"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -340,7 +363,7 @@ const Dashboard = () => {
                         
                         {/* Delete Button */}
                         <button
-                          onClick={() => handleDeleteQuiz(quiz._id)}
+                          onClick={() => openDeleteModal(quiz)}
                           className="bg-red-100 text-red-700 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-red-200 transition-all flex items-center justify-center border-2 border-red-300"
                           style={{ fontFamily: "'Nunito', sans-serif" }}
                           title="Delete quiz"
@@ -358,6 +381,18 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={() => handleDeleteQuiz(deleteModal.quiz)}
+        title="Delete Quiz?"
+        message={`Are you sure you want to delete "${deleteModal.quiz?.title}"? This action cannot be undone and all associated data will be permanently removed.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 };

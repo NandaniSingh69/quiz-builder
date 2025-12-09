@@ -98,24 +98,45 @@ async function getAllQuizzes(req, res) {
   try {
     const quizzes = await Quiz.find()
       .sort({ createdAt: -1 })
-      .select('title topic difficulty sessionCode isActive createdAt questions'); // ADD 'questions' here
+      .select('title topic difficulty sessionCode isActive createdAt questions');
     
-    // Map to include question count
-    const quizzesWithCount = quizzes.map(quiz => ({
-      _id: quiz._id,
-      title: quiz.title,
-      topic: quiz.topic,
-      difficulty: quiz.difficulty,
-      sessionCode: quiz.sessionCode,
-      isActive: quiz.isActive,
-      createdAt: quiz.createdAt,
-      questionCount: quiz.questions?.length || 0 // ADD THIS
-    }));
+    // Get participant count for each quiz from sessions
+    const quizzesData = await Promise.all(
+      quizzes.map(async (quiz) => {
+        let participantCount = 0;
+        
+        // If quiz has an active session, get participant count
+        if (quiz.sessionCode) {
+          try {
+            const Session = require('../models/session'); // Import here or at top
+            const session = await Session.findOne({ sessionCode: quiz.sessionCode });
+            if (session && session.participants) {
+              participantCount = session.participants.length;
+            }
+          } catch (err) {
+            console.log('Could not fetch session for:', quiz.sessionCode, err.message);
+          }
+        }
+        
+        return {
+          _id: quiz._id,
+          title: quiz.title,
+          topic: quiz.topic,
+          difficulty: quiz.difficulty,
+          sessionCode: quiz.sessionCode,
+          isActive: quiz.isActive,
+          createdAt: quiz.createdAt,
+          questions: quiz.questions || [],
+          questionCount: quiz.questions?.length || 0,
+          participantCount: participantCount
+        };
+      })
+    );
     
     res.json({
       success: true,
-      count: quizzesWithCount.length,
-      quizzes: quizzesWithCount
+      count: quizzesData.length,
+      quizzes: quizzesData
     });
   } catch (error) {
     console.error('Error fetching quizzes:', error);
@@ -125,6 +146,7 @@ async function getAllQuizzes(req, res) {
     });
   }
 }
+
 
 
 /**

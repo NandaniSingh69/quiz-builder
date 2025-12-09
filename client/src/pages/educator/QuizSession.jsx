@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getSocket, initializeSocket } from '../../services/socket';
 import { getSession } from '../../services/quizService';
 import { SOCKET_EVENTS } from '../../utils/constants';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ConfirmModal';
+
 
 const QuizSession = () => {
   const { sessionCode } = useParams();
@@ -17,6 +20,8 @@ const QuizSession = () => {
   const [loading, setLoading] = useState(false);
   const [activityLog, setActivityLog] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [resetModal, setResetModal] = useState(false);
+  const [endModal, setEndModal] = useState(false);
 
   useEffect(() => {
     const socketInstance = initializeSocket();
@@ -58,6 +63,7 @@ const QuizSession = () => {
     const handleParticipantUpdate = (data) => {
       if (data.action === 'joined') {
         addActivity(`👋 ${data.participantName} joined (Total: ${data.totalParticipants})`);
+        toast.success(`${data.participantName} joined!`, { duration: 2000 });
       }
     };
 
@@ -105,6 +111,7 @@ const QuizSession = () => {
       }
     } catch (error) {
       console.error('Error fetching session:', error);
+      toast.error('Failed to load session data');
     }
   };
 
@@ -121,6 +128,7 @@ const QuizSession = () => {
       socket.emit('start-quiz', { sessionCode });
       setQuizStarted(true);
       addActivity('🚀 Quiz started!');
+      toast.success('Quiz started successfully!');
       console.log('Start quiz clicked, quizStarted set to true');
     }
   };
@@ -131,18 +139,16 @@ const QuizSession = () => {
       const nextIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(nextIndex);
       addActivity(`📝 Question ${nextIndex + 1} sent to all participants`);
+      toast.success(`Question ${nextIndex + 1} sent!`);
     }
   };
 
   const handleEndQuiz = () => {
+    toast.success('Session ended');
     navigate('/educator/dashboard');
   };
 
   const handleResetSession = async () => {
-    if (!window.confirm('Are you sure you want to reset this session? All participant data will be cleared.')) {
-      return;
-    }
-    
     try {
       const response = await fetch(`http://localhost:5000/api/session/reset`, {
         method: 'POST',
@@ -153,15 +159,20 @@ const QuizSession = () => {
       const data = await response.json();
       
       if (data.success) {
-        alert('Session reset successfully!');
-        window.location.reload();
+        toast.success('Session reset successfully!');
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        alert('Failed to reset session: ' + data.error);
+        toast.error(data.error || 'Failed to reset session');
       }
     } catch (error) {
       console.error('Error resetting session:', error);
-      alert('Failed to reset session');
+      toast.error('Failed to reset session');
     }
+  };
+
+  const copySessionCode = () => {
+    navigator.clipboard.writeText(sessionCode);
+    toast.success('Session code copied to clipboard!');
   };
 
   console.log('Render state:', { quizStarted, currentQuestionIndex, totalQuestions });
@@ -187,9 +198,15 @@ const QuizSession = () => {
                   <p className="text-sm text-stone-600" style={{ fontFamily: "'Open Sans', sans-serif" }}>
                     Session Code:
                   </p>
-                  <span className="font-mono font-bold text-orange-600 text-base bg-orange-100 px-3 py-1 rounded-lg border border-orange-300">
-                    {sessionCode}
-                  </span>
+                  <button
+                    onClick={copySessionCode}
+                    className="font-mono font-bold text-orange-600 text-base bg-orange-100 px-3 py-1 rounded-lg border border-orange-300 hover:bg-orange-200 transition-colors flex items-center space-x-1"
+                  >
+                    <span>{sessionCode}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -197,7 +214,7 @@ const QuizSession = () => {
             {/* Action Buttons */}
             <div className="flex gap-3">
               <button
-                onClick={handleResetSession}
+                onClick={() => setResetModal(true)}
                 className="bg-yellow-100 text-yellow-700 px-5 py-2.5 rounded-xl hover:bg-yellow-200 transition-all font-bold border-2 border-yellow-300 flex items-center space-x-2 shadow-md hover:shadow-lg"
                 style={{ fontFamily: "'Nunito', sans-serif" }}
               >
@@ -207,7 +224,7 @@ const QuizSession = () => {
                 <span>Reset</span>
               </button>
               <button
-                onClick={handleEndQuiz}
+                onClick={() => setEndModal(true)}
                 className="bg-red-100 text-red-700 px-5 py-2.5 rounded-xl hover:bg-red-200 transition-all font-bold border-2 border-red-300 flex items-center space-x-2 shadow-md hover:shadow-lg"
                 style={{ fontFamily: "'Nunito', sans-serif" }}
               >
@@ -421,6 +438,30 @@ const QuizSession = () => {
           </div>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      <ConfirmModal
+        isOpen={resetModal}
+        onClose={() => setResetModal(false)}
+        onConfirm={handleResetSession}
+        title="Reset Session?"
+        message="Are you sure you want to reset this session? All participant data will be cleared and you'll need to restart the quiz."
+        confirmText="Reset"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* End Session Confirmation Modal */}
+      <ConfirmModal
+        isOpen={endModal}
+        onClose={() => setEndModal(false)}
+        onConfirm={handleEndQuiz}
+        title="End Session?"
+        message="Are you sure you want to end this session? You'll return to the dashboard."
+        confirmText="End Session"
+        cancelText="Cancel"
+        type="danger"
+      />
 
       {/* Custom Scrollbar Styles */}
       <style jsx>{`
