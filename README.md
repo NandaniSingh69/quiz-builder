@@ -1,6 +1,4 @@
-Here is a shorter, developer-style README you can use and tweak:
 
-```markdown
 # Quiz Builder
 
 Full-stack real-time quiz platform for educators and participants with AI-powered quiz generation.
@@ -124,5 +122,3 @@ CLIENT_URL=https://quiz-builder-alpha-five.vercel.app
 
 MIT
 ```
-
-You can trim even more (e.g., remove Deployment section) if you want it ultra-minimal.
