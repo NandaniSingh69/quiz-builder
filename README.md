@@ -91,23 +91,6 @@ npm start
 
 ---
 
-## Deployment
-
-**Frontend (Vercel)**
-
-- Set `REACT_APP_API_URL` (and optionally `REACT_APP_SOCKET_URL`) to your Render backend URL.
-- Connect repo and deploy from `main`.
-
-**Backend (Render)**
-
-Set env vars (same as local) but:
-
-```
-CLIENT_URL=https://quiz-builder-alpha-five.vercel.app
-```
-
----
-
 ## Features (quick)
 
 - Create quizzes (manual + AI)
@@ -121,4 +104,4 @@ CLIENT_URL=https://quiz-builder-alpha-five.vercel.app
 ## License
 
 MIT
-```
+
