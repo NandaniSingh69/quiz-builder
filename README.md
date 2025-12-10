@@ -1,30 +1,128 @@
-# 🎯 AI-Powered Real-Time Quiz Platform
+Here is a shorter, developer-style README you can use and tweak:
 
-An intelligent quiz platform where educators can generate quizzes using AI and conduct live sessions with real-time leaderboards.
+```markdown
+# Quiz Builder
 
-## ✨ Features
-- AI-powered quiz generation using Google Gemini
-- Real-time multiplayer gameplay
-- Live leaderboards
-- Sound effects & animations
-- Results analytics with CSV/PDF export
-- Session management
+Full-stack real-time quiz platform for educators and participants with AI-powered quiz generation.
 
-## 🛠️ Tech Stack
-- **Frontend:** React, Tailwind CSS, Socket.IO Client
-- **Backend:** Node.js, Express, Socket.IO
-- **Database:** MongoDB, Redis
-- **AI:** Google Gemini API
+- Live sessions with Socket.IO
+- AI quiz generation (Gemini)
+- OTP-based auth
+- MongoDB + Redis for data and sessions
+- Deployed: Vercel (frontend) + Render (backend)
 
-## 📸 Screenshots
-[Add screenshots here]
+---
 
-## 🚀 Installation
-[Installation steps]
+## Stack
 
-## 💡 Usage
-[How to use]
+**Frontend**
 
-## 👨‍💻 Author
-Your Name
+- React, React Router
+- Axios
+- Socket.IO client
 
+**Backend**
+
+- Node.js, Express
+- Socket.IO
+- MongoDB Atlas
+- Upstash Redis
+- Nodemailer
+- Gemini API
+
+---
+
+## Setup
+
+### 1. Clone
+
+```
+git clone https://github.com/NandaniSingh69/quiz-builder.git
+cd quiz-builder
+```
+
+### 2. Install
+
+```
+# backend
+cd server
+npm install
+
+# frontend
+cd ../client
+npm install
+```
+
+### 3. Env vars
+
+`server/.env`:
+
+```
+PORT=5000
+MONGODB_URI=your_mongodb_uri
+REDIS_URL=your_redis_url
+GEMINI_API_KEY=your_gemini_key
+EMAIL_USER=your_email
+EMAIL_PASS=your_email_app_password
+CLIENT_URL=http://localhost:3000
+```
+
+`client/.env`:
+
+```
+REACT_APP_API_URL=http://localhost:5000
+REACT_APP_SOCKET_URL=http://localhost:5000
+```
+
+---
+
+## Run locally
+
+```
+# backend
+cd server
+npm run dev
+
+# frontend (new terminal)
+cd client
+npm start
+```
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:5000`
+
+---
+
+## Deployment
+
+**Frontend (Vercel)**
+
+- Set `REACT_APP_API_URL` (and optionally `REACT_APP_SOCKET_URL`) to your Render backend URL.
+- Connect repo and deploy from `main`.
+
+**Backend (Render)**
+
+Set env vars (same as local) but:
+
+```
+CLIENT_URL=https://quiz-builder-alpha-five.vercel.app
+```
+
+---
+
+## Features (quick)
+
+- Create quizzes (manual + AI)
+- Start / manage live sessions
+- Join via session code
+- Live leaderboard & results
+- Basic analytics for educators
+
+---
+
+## License
+
+MIT
+```
+
+You can trim even more (e.g., remove Deployment section) if you want it ultra-minimal.
