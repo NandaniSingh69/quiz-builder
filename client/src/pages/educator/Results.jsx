@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import toast from 'react-hot-toast';
 import CopyButton from '../../components/CopyButton';
+import { getResults } from '../../services/quizService';
 
 
 const Results = () => {
@@ -30,8 +31,7 @@ const Results = () => {
   const fetchResults = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/session/${sessionCode}/results`);
-      const data = await response.json();
+      const data = await getResults(sessionCode);
       
       console.log('📊 Results data:', data);
       
@@ -43,7 +43,7 @@ const Results = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching results:', error);
-      alert('Failed to load results');
+      toast.error('Failed to load results');
     } finally {
       setLoading(false);
     }

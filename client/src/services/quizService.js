@@ -16,6 +16,11 @@ export const getQuizById = async (quizId) => {
   return response.data;
 };
 
+export const getResults = async (sessionCode) => {
+  const response = await api.get(`/api/session/${sessionCode}/results`);
+  return response.data;
+};
+
 // Session APIs
 export const startSession = async (quizId) => {
   const response = await api.post('/api/session/start', { quizId });
