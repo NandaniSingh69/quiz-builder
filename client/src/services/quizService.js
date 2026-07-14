@@ -54,3 +54,11 @@ export const getLeaderboard = async (sessionCode) => {
   const response = await api.get(`/api/session/leaderboard/${sessionCode}`);
   return response.data;
 };
+export const deleteQuiz = async (quizId) => {
+  const response = await api.delete(`/api/quiz/${quizId}`);
+  return response.data;
+};
+export const resetSession = async (sessionCode) => {
+  const response = await api.post('/api/session/reset', { sessionCode });
+  return response.data;
+};

@@ -5,7 +5,7 @@ import { getSession } from '../../services/quizService';
 import { SOCKET_EVENTS } from '../../utils/constants';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ConfirmModal';
-
+import { resetSession } from '../../services/quizService';
 
 const QuizSession = () => {
   const { sessionCode } = useParams();
@@ -150,13 +150,7 @@ const QuizSession = () => {
 
   const handleResetSession = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/session/reset`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ sessionCode })
-      });
-      
-      const data = await response.json();
+      const data = await resetSession(sessionCode);
       
       if (data.success) {
         toast.success('Session reset successfully!');

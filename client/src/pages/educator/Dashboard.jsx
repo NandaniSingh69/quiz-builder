@@ -4,6 +4,7 @@ import { getAllQuizzes, startSession } from '../../services/quizService';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import CopyButton from '../../components/CopyButton';
+import { deleteQuiz } from '../../services/quizService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -58,11 +59,7 @@ const Dashboard = () => {
 
   const handleDeleteQuiz = async (quiz) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/quiz/${quiz._id}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
+      const data = await deleteQuiz(quiz._id);
       
       if (data.success) {
         toast.success('Quiz deleted successfully!');
