@@ -93,7 +93,7 @@ npm start
 
 ## Features (quick)
 
-- Create quizzes (manual + AI)
+- Create quizzes (AI)
 - Start / manage live sessions
 - Join via session code
 - Live leaderboard & results
